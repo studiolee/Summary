@@ -197,7 +197,7 @@ unique = true表示查询结果集为单个。因为一个学生只能有一个�
 
 此时只是配置了stuInfo对student的一对一关系，我们仅可以从查到的stuInfo对象中查到student。
 
-而不能从查到的student对象中查到stuInfo信息。所以还要再student类中配置：
+而不能从查到的student对象中查到stuInfo信息。所以还要在student类中配置：
 
 ```java
  //一对一关系
