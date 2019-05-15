@@ -207,3 +207,82 @@ unique = true表示查询结果集为单个。因为一个学生只能有一个�
 
 由于student是被维护方，所以写法比较简单。mappedBy所映射的就是stuInfo类中的private Student student;
 
+#### 2.一对多关系（多对一）
+
+在数据库中，学生与班级（ban）是多对一关系。一个班级有多个学生，一个学生只能属于一个班级，多个学生属于一个班级。
+
+首先选择谁是维护方，谁是被维护方。
+
+在student中有班级id外键，所以选择student为维护方：
+
+```java
+ //配置多对一关系
+    @ManyToOne(targetEntity = Ban.class, fetch = FetchType.LAZY)
+    @JoinColumn(name = "banId")
+    private Ban ban;
+```
+
+同样在ban中配置被维护方：
+
+```java
+ //被维护端
+    @OneToMany(mappedBy = "ban")
+    private List<Student> students;
+```
+
+#### 3.多对多关系
+
+多对多需要另外创建关系表，命名一般都是主表_从表。例如我们选择student为主表，维护方。course从表，被维护方。产生的中间表就是student_course。
+
+student_course：
+
+```java
+public class Student_Course {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer s_cId;
+    private Integer sId;
+    private Integer cId;
+```
+
+然后在主表中配置：
+
+```java
+    //配置课程对学生的多对多关系映射，选择课程为维护端。
+    @ManyToMany
+    @JoinTable(
+            name = "student_course",//指定中间表名
+            joinColumns = {@JoinColumn(name = "sId",referencedColumnName = "id")},
+            inverseJoinColumns = {@JoinColumn(name = "cId",referencedColumnName = "cId")}
+    )
+```
+
+course中配置被维护方
+
+```java
+ @ManyToMany(mappedBy = "courses")
+    private List<Student> students;
+```
+
+### 5.创建Repository
+
+```java
+@Repository
+public interface StudentRepository extends JpaRepository<Student, Integer> {
+    //自定义查询
+    //查询出生日期在2109年以前的学生姓名，并查询他们的班级。升序返回
+
+    @Query(value = " SELECT s.name,b.ban_teacher from student s , ban b WHERE\n" +
+            "s.ban_id = b.b_id and s.birth < '2019-1-1 00:00:00' ORDER BY s.birth ASC ",
+            nativeQuery = true)
+    public List<Object[]> findOldStus();
+
+    @Query(value = " select s.`name`,b.ban_name from student s,ban b\n" +
+            "where s.ban_id = b.b_id and s.birth < ?1 ", nativeQuery = true)
+    public List<Object[]> findAllBeforeBirth(Date birth);
+
+    @Query(value = "select * from student s where s.gender = ?1",nativeQuery = true)
+    public List<Student> findAllByGender(Integer gender);
+}
+```
+
