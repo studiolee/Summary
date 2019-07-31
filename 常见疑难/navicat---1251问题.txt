@@ -1,0 +1,32 @@
+Navicat 远程连接Docker容器中的mysql 报错：1251 - Client does not support authentication protocol 解决办法。
+2018年07月27日 12:19:55 海鸥花开 阅读数：850
+在smarTTY客户端（其它客户端也行）命令行界面进入mysql数据库
+(1)容器中登录mysql,进入mysql>命令行
+
+  1、docker exec -it mysql01 bash      //mysql01是mysql容器的别名
+
+  2、mysql -uroot -p   //-uroot
+
+  3、输入密码
+
+  4、进入mysql>命令行界面
+
+(2)进行授权远程连接(注意mysql 8.0跟之前的授权方式不同)
+
+  1、mysql> GRANT ALL PRIVILEGES ON *.* TO 'root'@'%'WITH GRANT OPTION; 
+
+  2、mysql>FLUSH PRIVILEGES;
+
+(3)更改加密规则
+
+  ALTER USER 'root'@'localhost' IDENTIFIED BY 'password' PASSWORD EXPIRE NEVER;
+
+(4)更新root用户密码
+
+ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'password'; 
+
+刷新权限
+
+flush privileges;
+
+(5)OK，设置完成，再次使用 Navicat 连接数据库
