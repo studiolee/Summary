@@ -217,7 +217,256 @@ JMM(Java Memory Model) :所有的对象及其信息放在主内存中，而线�
 
 ### 	12.CountDownLatch & wait和notify 线程间通信
 
+### 13.ReentrantLock可以用于替代synchronized 
+
+```java
+public class ReentrantLock1 {
+    
+    synchronized void m1() {
+        for (int i = 0; i < 10; i++) {
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println(i);
+        }
+    }
+    
+    synchronized void m2() {
+        System.out.println("m2...");
+    }
+
+    public static void main(String[] args) {
+        ReentrantLock1 r1 = new ReentrantLock1();
+        new Thread(r1::m1, "t1").start(); // m1 已经执行，被t1占有锁this
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        new Thread(r1::m2, "t2").start(); // 锁已经被其他线程占用，m1执行完毕后才会执行
+    }
+}
+```
+
+```java
+public class ReentrantLock2 {
+
+    ReentrantLock lock = new ReentrantLock();
+
+    void m1() {
+        lock.lock(); // 相当于 synchronized
+        try {
+            for (int i = 0; i < 10; i++) {
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(i);
+            }
+        } finally {
+            lock.unlock(); // 使用完毕后，必须手动释放锁
+            // 不同于synchronized，抛出异常后，不会自动释放锁，需要我们在finally中释放此锁
+        }
+    }
+
+    void m2() {
+        lock.lock(); // 相当于 synchronized
+        try {
+            System.out.println("m2...");
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public static void main(String[] args) {
+        ReentrantLock2 r1 = new ReentrantLock2();
+        new Thread(r1::m1, "t1").start(); // m1 已经执行，被t1占有锁this
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        new Thread(r1::m2, "t2").start(); // 锁已经被其他线程占用，m1执行完毕后，不会执行
+    }
+}
+```
+
+### 14.ReentrantLock 和 synchronized 的区别 
+
+```java
+public class ReentrantLock3 {
+
+    ReentrantLock lock = new ReentrantLock();
+
+    void m1() {
+        lock.lock(); // 相当于 synchronized
+        try {
+            for (int i = 0; i < 10; i++) {
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(i);
+            }
+        } finally {
+            lock.unlock(); // 使用完毕后，必须手动释放锁
+            // 不同于synchronized，抛出异常后，不会自动释放锁，需要我们在finally中释放此锁
+        }
+    }
+
+    void m2(){
+        // 尝试获取锁，返回true拿到了
+        try {
+            if (lock.tryLock(10,TimeUnit.SECONDS)) {
+                // lock.tryLock(5, TimeUnit.SECONDS) // 等5s内还没拿到就返回false
+                System.out.println("m2...");
+            } else {
+                System.out.println(" m2 没拿到锁");
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        lock.unlock();
+    }
+
+    public static void main(String[] args) {
+        ReentrantLock3 r1 = new ReentrantLock3();
+        new Thread(r1::m1, "t1").start(); // m1 已经执行，被t1占有锁this
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        new Thread(r1::m2, "t2").start(); // 锁已经被其他线程占用，m1执行完毕后，不会执行
+    }
+
+}
+```
+
+ReentrantLock 可以调用 lockInterruptibly方法，可以对线程interrupt方法做出响应,在一个线程等待锁的过程中，可以被interrupt方法打断等待。
+
+ReentrantLock 可以指定为公平锁，synchronized 是不公平锁 .
+
+ReentrantLock 可以指定为公平锁，synchronized 是不公平锁 ,不公平锁，无论先后，线程调度器将会随机给某个线程锁，不用计算线程时序，效率较高 .
+
+### 15.ThreadLocal
+
 ## 2. 并发容器
+
+### 1.单例模式
+
+```java
+public class Singleton {
+    
+    private Singleton() {
+    }
+    
+    private static class Inner {
+        private static Singleton s = new Singleton();
+    }
+
+    public static Singleton getInstance() {
+        return Inner.s;
+    }
+    
+}
+```
+
+一种实现方式
+
+### 2.ConcurrentMap 
+
+#### ConcurrentHashMap ：
+
+​	加的是分段所，将容器分为16段，每段都有一个锁 segment; 1.8以后 使用 Node +    synchronized+CAS 
+
+#### ConcurrentSkipListMap ：
+
+​	并发且排序，插入效率较低，但是读取很快 
+
+#### Hashtable 
+
+​	每次加锁，都锁一个对象 
+
+### 3.CopyOnWriteList 
+
+写时复制List： 当发生写操作(添加、删除、修改)时，容器就会复制原有容器一份然后对新操作进行写操作，然后再将引用转向新的容器  
+
+好处：保证读操作不需要锁也能正常访问，是一种读写分离的实现方式 
+
+缺点：写的效率极低，特定场景下才会使用到
+
+### 4.SynchronizedList （）
+
+将普通集合变为同步集合的工具方法 。
+
+### 5.ConcurrentQueue 
+
+​    ConcurrentLinkedQueue无界队列
+
+   ConcurrentLinkedDeque 双端队列
+
+### 6.LinkedBlockingQueue 
+
+​	阻塞同步队列
+
+### 7.ArrayBlockingQueue 
+
+​	阻塞有界同步队列 
+
+### 8.DelayQueue 
+
+​	DelayQueue元素必须为 Delayed类型的,即必须设置元素的等待时间 
+
+​	用途，定时执行任务 
+
+### 9.TransferQueue 
+
+​	拥有transfer方法，传输，当transfer一个元素时，如果有take方法阻塞等待获取元素，则不向队列中保存，直接给等待的take方法 ，如果没有消费者线程，transfer线程将会阻塞 。
+
+### 10.SynchronousQueue 
+
+​	TransferQueue是有容量的，可以通过add/put等方法向队列中加入元素 ，但是SynchronousQueue却没有 
+
+### 11.总结
+
+| Map/Set:                                   |
+| ------------------------------------------ |
+| 无并发:                                    |
+| HashMap                                    |
+| TreeMap                                    |
+| LinkedHashMap                              |
+| 低并发:                                    |
+| HashTable                                  |
+| Collections.synchronizedMap()              |
+| 高并发:                                    |
+| ConcurrentHashMap - 并发高                 |
+| ConcurrentSkipListMap - 并发高 且 需要排序 |
+|                                            |
+| 队列:                                      |
+| 无并发:                                    |
+| ArrayList                                  |
+| LinkedList                                 |
+| 低并发:                                    |
+| Vector                                     |
+| Collections.synchronizedList()             |
+| 写少读多:                                  |
+| CopyOnWriteList                            |
+| 高并发                                     |
+| Queue：                                    |
+| ConcurrentLinkedQueue 非阻塞同步队列       |
+| BlockQueue                                 |
+| LinkedBlockingQueue                        |
+| ArrayBlockingQueue                         |
+| TransferQueue                              |
+| SynchronousQueue                           |
+| DelayQueue                                 |
+
+ 
 
 ## 3.线程池
 
