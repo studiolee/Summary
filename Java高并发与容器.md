@@ -466,7 +466,153 @@ public class Singleton {
 | SynchronousQueue                           |
 | DelayQueue                                 |
 
- 
-
 ## 3.线程池
 
+### 1.Executor  接口
+
+```java
+public interface Executor {
+
+    /**
+     * Executes the given command at some time in the future.  The command
+     * may execute in a new thread, in a pooled thread, or in the calling
+     * thread, at the discretion of the {@code Executor} implementation.
+     *
+     * @param command the runnable task
+     * @throws RejectedExecutionException if this task cannot be
+     * accepted for execution
+     * @throws NullPointerException if command is null
+     */
+    void execute(Runnable command);
+}
+```
+
+ runnable接口用于定义一项任务, 将任务传递给Executor后, 由 Executor.execute() 方法定义如何执行任务 
+
+### 2.ExecutorService 
+
+是Executor的服务, service 一般都是一些后台线程, 跑在后台提供服务, 这里代表 执行器服务 ,ExecutorService就是这种线程, 启动后一直在后台等待任务扔到容器中执行。
+
+```java
+public interface ExecutorService extends Executor {
+
+    void shutdown();
+
+    List<Runnable> shutdownNow();
+    
+    boolean isShutdown();
+    
+    boolean isTerminated();
+
+    boolean awaitTermination(long timeout, TimeUnit unit)
+        throws InterruptedException;
+
+    <T> Future<T> submit(Callable<T> task);
+
+    <T> Future<T> submit(Runnable task, T result);
+
+    Future<?> submit(Runnable task);
+    
+    <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
+        throws InterruptedException;
+
+    <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks,
+                                  long timeout, TimeUnit unit)
+        throws InterruptedException;
+
+    <T> T invokeAny(Collection<? extends Callable<T>> tasks)
+        throws InterruptedException, ExecutionException;
+
+    <T> T invokeAny(Collection<? extends Callable<T>> tasks,
+                    long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException;
+}
+```
+
+execute 和 submit 的区别: 
+
+没有本质区别,只不过execute只能执行Runnable接口 
+
+### 3.Callable 
+
+类似Runnable, 执行Runnable任务时,实际调用的是run方法 
+
+执行Callable任务时,实际调用的是 call方法 
+
+区别：
+
+​	callable 有返回值,线程运行结束后需要返回值,则需要callable 
+
+​	callable可以抛出异常,而Runnable不能抛出异常,必须自己处理 
+
+```java
+@FunctionalInterface
+public interface Callable<V> {
+    /**
+     * Computes a result, or throws an exception if unable to do so.
+     *
+     * @return computed result
+     * @throws Exception if unable to compute a result
+     */
+    V call() throws Exception;
+}
+```
+
+### 4.Executors 
+
+操作Executor的工具类 
+
+### 5.ThreadPool 
+
+线程池 
+
+### 6.Future 
+
+未来的执行结果 
+
+### 7.CachedThreadPool 
+
+可缓存的线程 
+
+当有个请求进入线程池内, 线程池将会启用一个线程 
+
+当再次有个请求进入线程池内, 并且上个线程未结束, 仍然会启用一个线程 
+
+当有线程执行完毕后,这个线程不会被清除, 而是被缓存,当有请求进入时, 直接使用缓存线程调用 
+
+跟 fixedThreadPool 类似, 只不过没有上限(最多Integer最大值), 是一种弹性操作 
+
+当线程一直不被使用, 缓存最多持续1分钟(AliveTime默认值),就会被线程池销毁 
+
+### 8.SingleThreadPool 
+
+线程池中只有一个线程。 作用,保证线程执行的时序性 
+
+### 9.ScheduledPool 
+
+执行定时的任务,类似Delay, 可以替代Timer 
+
+### 10.WorkStealingPool 
+
+工作窃取线程池 
+
+WorkStealingPool 背后是使用 ForkJoinPool实现的 
+
+### 11.ForkJoinPool 
+
+分而治之  Fork: 分叉  Join: 合并 
+
+### 12.ThreadPoolExecutor 
+
+线程池的实现原理，除了ForkJoinPool与WorkStealingPool线程池，其他线程池大部分线程池背后都是ThreadPoolExecutor 
+
+### 13.ParallelStreamAPI 
+
+| Executor 用于执行某个任务                                    |
+| ------------------------------------------------------------ |
+| ExecutorService 一个服务,在后台一直运行,等待任务抛入(submit),并执行,抛入的任务又分为两个类型: |
+| Callable 有返回值                                            |
+| Runnable 没有返回值                                          |
+| Executors 是一个用于操作上面对象的工具类和工厂类             |
+| ThreadPool 线程池                                            |
+| Future 未来,未来的结果                                       |
