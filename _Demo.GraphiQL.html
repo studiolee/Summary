@@ -1,0 +1,126 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <!-- 这个使用的是react -->
+    <script src="scripts/react.development.js"></script>
+    <script src="scripts/react-dom.development.js"></script>
+
+    <script src="scripts/graphiql.min.js" type="application/javascript"></script>
+    <link rel="stylesheet" href="styles/graphiql.min.css" />
+    <style>
+        body {
+            height: 100%;
+            margin: 0;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #graphiql {
+            height: 80vh;
+        }
+
+        #toolbox {
+            height: 20vh;
+        }
+
+            #toolbox label {
+                width: 200px;
+                display: inline-block;
+            }
+
+            #toolbox input[type=text] {
+                width: 400px;
+            }
+    </style>
+    <script type="text/javascript">
+        window.parameters = {
+            url: "https://swapi-graphql.netlify.app/.netlify/functions/index",
+            query: "",
+            variables: "",
+            method: "post",
+            headers: "",
+            lastReactElement: null,
+            CreateNewReactElement: function () {
+                this.lastReactElement = React.createElement(GraphiQL,
+                    {
+                        fetcher: function (graphQLParams, opts = { headers: {} }) {
+                            let headers = opts.headers;
+                            if (typeof headers === 'string' && headers !== '') {
+                                headers = JSON.parse(opts.headers);
+                            }
+
+                            // 这段演示很有趣，局部变量headers是从参数来的，即界面上写的；局部变量 this.headers 是由额外的代码设置的
+                            // 为了避免造成“只能添加，无法删除和修改”的窘境，一般需要关掉UI上的输入框。使用headerEditorEnabled控制。
+                            // 本示例没有关闭只是为了做演示
+                            this.headers = Object.assign(
+                                {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json'
+                                },
+                                headers,
+                                this.headers
+                            );
+
+                            return fetch(parameters.url, {
+                                method: 'post',
+                                headers: this.headers,
+                                body: JSON.stringify(graphQLParams),
+                                credentials: 'omit'
+                            })
+                                .then(function (response) {
+                                    return response.text();
+                                })
+                                .then(function (responseBody) {
+                                    try {
+                                        return JSON.parse(responseBody);
+                                    } catch (error) {
+                                        return responseBody;
+                                    }
+                                });
+                        },
+                        query: this.query,
+                        variables: this.variables,
+                        headers: this.headers,
+                        operationName: this.operationName,
+                        onEditQuery: function (newQuery) { parameters.query = newQuery; },
+                        onEditVariables: function (newVariables) { parameters.variables = newVariables; },
+                        onEditHeaders: function (newHeaders) {
+                            parameters.headers = newHeaders;
+                        },
+                        onEditOperationName: null,
+                        defaultSecondaryEditorOpen: true,
+                        headerEditorEnabled: true
+                    });
+
+                return this.lastReactElement;
+            }
+        };
+		
+        function GetValue() {
+            document.getElementById('tbEditorValue').value = parameters.query;
+            document.getElementById('tbUrl').value = parameters.url;
+            document.getElementById('tbHeader').value = parameters.headers;
+        }
+        function SetValue() {
+            parameters.url = document.getElementById('tbUrl').value;
+            parameters.query = document.getElementById('tbEditorValue').value;
+            parameters.headers = document.getElementById('tbHeader').value;
+            window.parameters.CreateNewReactElement();
+            ReactDOM.render(window.parameters.lastReactElement, document.getElementById('graphiql')
+            );
+        }
+    </script>
+</head>
+
+<body>
+    <div id="toolbox">
+        <label>访问API的URL：</label><input id="tbUrl" type="text" value="https://swapi-graphql.netlify.app/.netlify/functions/index" />
+        <br />
+        <label>编辑器的值：</label><input id="tbEditorValue" type="text" /><br />
+        <label>Header：</label><input id="tbHeader" type="text" /><br />
+        <button onclick="GetValue();">取值</button>
+        <button onclick="SetValue();">赋值</button>
+    </div>
+    <div id="graphiql">Waiting for Init...</div>
+</body>
+</html>
